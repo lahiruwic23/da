@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Detectives | Interactive Data Documentation Tool</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            900: '#090d16',
+                            800: '#0f172a',
+                            700: '#1e293b',
+                            600: '#334155',
+                            accent: '#06b6d4',
+                            neon: '#38bdf8',
+                            pink: '#ec4899',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Courier New', 'monospace'],
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #060911;
+            color: #e2e8f0;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+
+        .glow-accent {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+        }
+        .glow-pink {
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.25);
+        }
+
+        /* Glassmorphism elements */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#060911] text-slate-200">
+
+    <!-- Header / Navigation Bar -->
+    <header class="glass-panel sticky top-0 z-40 border-b border-slate-800 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+                    <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wider text-slate-100 flex items-center gap-2 font-mono">
+                        TGF MIND // DATA DETECTIVES <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">v2075.1</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 font-mono">Assignment 1: Resource Allocation Records Suite</p>
+                </div>
+            </div>
+
+            <!-- Global Actions & Status -->
+            <div class="flex items-center space-x-3">
+                <button onclick="generateSampleData()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition flex items-center gap-1.5">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Generate Sample Dataset
+                </button>
+                <div class="h-6 w-px bg-slate-800"></div>
+                <div id="statusBadge" class="px-3 py-1 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-2 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-slate-500"></span> NO DATASET LOADED
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="border-b border-slate-800 bg-slate-900/50 px-4">
+        <div class="max-w-7xl mx-auto flex space-x-1 overflow-x-auto custom-scrollbar" id="tabNav">
+            <button onclick="switchTab('upload')" id="tab-upload" class="tab-btn active px-4 py-3 text-sm font-medium text-cyan-400 border-b-2 border-cyan-400 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="upload-cloud" class="w-4 h-4"></i> T1: Data Ingestion
+            </button>
+            <button onclick="switchTab('table')" id="tab-table" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="table" class="w-4 h-4"></i> T2: Explorer & Filters
+            </button>
+            <button onclick="switchTab('cleaning')" id="tab-cleaning" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="wrench" class="w-4 h-4"></i> T3: Quality & Cleaning
+            </button>
+            <button onclick="switchTab('stats')" id="tab-stats" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="calculator" class="w-4 h-4"></i> T4: Descriptive Stats
+            </button>
+            <button onclick="switchTab('outliers')" id="tab-outliers" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="activity" class="w-4 h-4"></i> T5: IQR Outlier Analysis
+            </button>
+            <button onclick="switchTab('export')" id="tab-export" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                <i data-lucide="download" class="w-4 h-4"></i> T6: Exports & Audit Log
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- ALERT / NOTIFICATION BANNER -->
+        <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md"></div>
+
+        <!-- SECTION T1: DATA INGESTION -->
+        <section id="section-upload" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Dropzone -->
+                <div class="md:col-span-2 glass-panel p-6 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center hover:border-cyan-500/50 transition cursor-pointer" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+                    <div class="p-4 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 mb-4">
+                        <i data-lucide="file-up" class="w-10 h-10"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-100">Upload Dataset (CSV)</h3>
+                    <p class="text-xs text-slate-400 mt-1 max-w-sm">Drag & drop your <span class="font-mono text-cyan-400">Resource Allocation Records.csv</span> file here, or click to browse files.</p>
+                    <span class="mt-4 text-xs font-mono px-3 py-1 bg-slate-800 rounded border border-slate-700 text-slate-300">Supports standard CSV formatting</span>
+                </div>
+
+                <!-- Dataset Meta Card -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                    <h3 class="text-sm font-bold tracking-wider text-slate-400 uppercase font-mono flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> Summary Overview
+                    </h3>
+                    <div class="space-y-3 font-mono">
+                        <div class="flex justify-between items-center p-2.5 bg-slate-900/70 rounded border border-slate-800/80">
+                            <span class="text-xs text-slate-400">Total Rows</span>
+                            <span id="metaTotalRows" class="text-sm font-bold text-cyan-400">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2.5 bg-slate-900/70 rounded border border-slate-800/80">
+                            <span class="text-xs text-slate-400">Total Columns</span>
+                            <span id="metaTotalCols" class="text-sm font-bold text-cyan-400">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2.5 bg-slate-900/70 rounded border border-slate-800/80">
+                            <span class="text-xs text-slate-400">Clean Records</span>
+                            <span id="metaCleanRows" class="text-sm font-bold text-emerald-400">0</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2.5 bg-slate-900/70 rounded border border-slate-800/80">
+                            <span class="text-xs text-slate-400">Audit Logs Recorded</span>
+                            <span id="metaLogCount" class="text-sm font-bold text-amber-400">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto Detected Data Types Section -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <h3 class="text-sm font-bold tracking-wider text-slate-300 uppercase font-mono flex items-center gap-2">
+                    <i data-lucide="database" class="w-4 h-4 text-cyan-400"></i> Column Structure & Auto-Detected Types
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Column Name</th>
+                                <th class="p-3">Detected Type</th>
+                                <th class="p-3">Sample Value</th>
+                                <th class="p-3">Non-Null Count</th>
+                                <th class="p-3">Null Count</th>
+                            </tr>
+                        </thead>
+                        <tbody id="columnMetaBody" class="divide-y divide-slate-800 text-slate-300">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-slate-500 italic">No dataset loaded yet. Upload a CSV or generate sample data.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION T2: SEARCH, SORT & FILTER (EXPLORER) -->
+        <section id="section-table" class="tab-content hidden space-y-4">
+            <!-- Controls Bar -->
+            <div class="glass-panel p-4 rounded-xl border border-slate-800 flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+                    <div class="relative w-full">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input type="text" id="searchInput" placeholder="Search across all fields..." oninput="applyTableFilters()" class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+                    </div>
+                </div>
+
+                <!-- Column Specific Filters Drawer Toggle -->
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleFilterDrawer()" class="px-3 py-2 text-xs font-mono rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 flex items-center gap-1.5">
+                        <i data-lucide="filter" class="w-4 h-4 text-cyan-400"></i> Column Filters
+                    </button>
+                    <span id="filteredCountBadge" class="text-xs font-mono px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">Showing 0 / 0</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Filter Drawer -->
+            <div id="filterDrawer" class="hidden glass-panel p-4 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Injected via JavaScript -->
+            </div>
+
+            <!-- Data Table -->
+            <div class="glass-panel rounded-xl border border-slate-800 overflow-hidden">
+                <div class="overflow-x-auto max-h-[550px] custom-scrollbar">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900/90 text-slate-400 uppercase sticky top-0 z-10 border-b border-slate-800 backdrop-blur-md">
+                            <tr id="tableHeaderRow">
+                                <!-- Headers injected via JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <tr>
+                                <td colspan="100%" class="p-8 text-center text-slate-500">No data available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION T3: QUALITY & CLEANING ENGINE -->
+        <section id="section-cleaning" class="tab-content hidden space-y-6">
+            <!-- Detection Dashboard Summary -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="glass-panel p-4 rounded-xl border border-slate-800 flex items-center space-x-3">
+                    <div class="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                        <i data-lucide="copy-x" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-mono text-slate-400 uppercase block">Duplicate Rows</span>
+                        <span id="countDuplicates" class="text-xl font-bold text-rose-400 font-mono">0</span>
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800 flex items-center space-x-3">
+                    <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-mono text-slate-400 uppercase block">Missing Cells</span>
+                        <span id="countMissing" class="text-xl font-bold text-amber-400 font-mono">0</span>
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800 flex items-center space-x-3">
+                    <div class="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                        <i data-lucide="key" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-mono text-slate-400 uppercase block">Conflicting IDs</span>
+                        <span id="countConflicts" class="text-xl font-bold text-cyan-400 font-mono">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto-Correction Rules Panel -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <h3 class="text-sm font-bold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+                    <i data-lucide="wand-2" class="w-4 h-4 text-cyan-400"></i> Automatic Data Correction Engine
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Rule 1: Duplicates -->
+                    <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg space-y-3">
+                        <h4 class="text-xs font-bold font-mono text-slate-300 uppercase">1. Duplicate Detection</h4>
+                        <p class="text-xs text-slate-400">Identify exact row duplicates and remove them, retaining the first occurrence.</p>
+                        <button onclick="cleanDuplicates()" class="w-full py-2 px-3 bg-rose-500/20 text-rose-300 border border-rose-500/40 rounded text-xs font-mono font-medium hover:bg-rose-500/30 transition">
+                            Deduplicate Records
+                        </button>
+                    </div>
+
+                    <!-- Rule 2: Whitespace & Text Case -->
+                    <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg space-y-3">
+                        <h4 class="text-xs font-bold font-mono text-slate-300 uppercase">2. Text Standardization</h4>
+                        <p class="text-xs text-slate-400">Trim leading/trailing spaces and format text strings uniform case.</p>
+                        <button onclick="cleanTextStandardization()" class="w-full py-2 px-3 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded text-xs font-mono font-medium hover:bg-cyan-500/30 transition">
+                            Trim & Standardize Text
+                        </button>
+                    </div>
+
+                    <!-- Rule 3: Impute Missing Numeric -->
+                    <div class="p-4 bg-slate-900/60 border border-slate-800 rounded-lg space-y-3">
+                        <h4 class="text-xs font-bold font-mono text-slate-300 uppercase">3. Missing Value Imputation</h4>
+                        <select id="imputeMethodSelect" class="w-full p-2 bg-slate-800 border border-slate-700 rounded text-xs font-mono text-slate-200">
+                            <option value="mean">Impute Numerical with Mean</option>
+                            <option value="median">Impute Numerical with Median</option>
+                            <option value="mode">Impute Categorical with Mode</option>
+                        </select>
+                        <button onclick="applyImputation()" class="w-full py-2 px-3 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded text-xs font-mono font-medium hover:bg-emerald-500/30 transition">
+                            Run Imputation Strategy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Issues Table / Preview Panel -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+                        <i data-lucide="eye" class="w-4 h-4 text-amber-400"></i> Flagged Anomaly Inspector
+                    </h3>
+                    <span class="text-xs text-slate-400 font-mono">Double click cells in T2 Explorer to manually edit</span>
+                </div>
+                <div class="overflow-x-auto max-h-[350px] custom-scrollbar">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-400 uppercase sticky top-0">
+                            <tr>
+                                <th class="p-2.5">Row ID</th>
+                                <th class="p-2.5">Issue Type</th>
+                                <th class="p-2.5">Target Column</th>
+                                <th class="p-2.5">Current Value</th>
+                                <th class="p-2.5">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="anomaliesTableBody" class="divide-y divide-slate-800 text-slate-300">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION T4: DESCRIPTIVE STATISTICS ENGINE -->
+        <section id="section-stats" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-sm font-bold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+                            <i data-lucide="calculator" class="w-4 h-4 text-cyan-400"></i> Numerical Descriptive Statistics
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Full parametric calculations computed directly from active memory records</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Metric</th>
+                                <th class="p-3" id="statHeaderCol">Selected Numerical Columns</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody" class="divide-y divide-slate-800 text-slate-300">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION T5: IQR OUTLIER ANALYSIS & COMPARATIVE STATS -->
+        <section id="section-outliers" class="tab-content hidden space-y-6">
+            <!-- Controls & Info Header -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-sm font-bold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+                            <i data-lucide="activity" class="w-4 h-4 text-pink-400"></i> Outlier Analysis (1.5 × IQR Rule)
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Calculates inclusive quartiles ($Q1, Q3$), Interquartile Range, and outlier fences.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-mono text-slate-400">Analyze Column:</label>
+                        <select id="outlierColSelect" onchange="renderOutlierAnalysis()" class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded text-xs font-mono text-cyan-400 focus:outline-none focus:border-cyan-500">
+                            <!-- Numerical columns populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outlier Overview Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono">
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400 block uppercase">Lower Fence (Q1 - 1.5*IQR)</span>
+                    <span id="valLowerFence" class="text-lg font-bold text-cyan-400">0.00</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400 block uppercase">Upper Fence (Q3 + 1.5*IQR)</span>
+                    <span id="valUpperFence" class="text-lg font-bold text-cyan-400">0.00</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400 block uppercase">Outlier Count</span>
+                    <span id="valOutlierCount" class="text-lg font-bold text-rose-400">0</span>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400 block uppercase">Outlier %</span>
+                    <span id="valOutlierPct" class="text-lg font-bold text-pink-400">0.0%</span>
+                </div>
+            </div>
+
+            <!-- Comparison Table: With vs Without Outliers -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <h4 class="text-xs font-bold tracking-wider text-slate-300 uppercase font-mono">Comparative Metrics: Complete vs Cleaned (No Outliers)</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">Metric</th>
+                                <th class="p-3">All Records (With Outliers)</th>
+                                <th class="p-3">Filtered Records (Without Outliers)</th>
+                                <th class="p-3">Delta / Variance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outlierComparisonBody" class="divide-y divide-slate-800 text-slate-300">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Interactive Visualizations -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Histogram / Distribution Canvas -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                    <h4 class="text-xs font-bold tracking-wider text-slate-300 uppercase font-mono flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 text-cyan-400"></i> Distribution Histogram
+                    </h4>
+                    <div class="h-64 relative">
+                        <canvas id="histogramChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Box Plot Approximation Canvas -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                    <h4 class="text-xs font-bold tracking-wider text-slate-300 uppercase font-mono flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i> Value Distribution & Outlier Points
+                    </h4>
+                    <div class="h-64 relative">
+                        <canvas id="boxplotChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION T6: EXPORTS & AUDIT LOG -->
+        <section id="section-export" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Download Cleaned Dataset -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2 text-emerald-400">
+                            <i data-lucide="file-check" class="w-6 h-6"></i>
+                            <h3 class="text-sm font-bold tracking-wider uppercase font-mono">Cleaned Dataset CSV</h3>
+                        </div>
+                        <p class="text-xs text-slate-400">Export the cleaned CSV file containing unique, standardized, and imputed data rows. Original data remains preserved in raw state.</p>
+                    </div>
+                    <button onclick="exportCleanedCSV()" class="w-full py-3 px-4 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-mono font-bold hover:bg-emerald-500/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i> Download Cleaned CSV
+                    </button>
+                </div>
+
+                <!-- Download Audit Log -->
+                <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4 flex flex-col justify-between">
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2 text-amber-400">
+                            <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                            <h3 class="text-sm font-bold tracking-wider uppercase font-mono">Audit Log & History</h3>
+                        </div>
+                        <p class="text-xs text-slate-400">Export the structured change log file recording every manual edit and automated cleaning rule executed during the session.</p>
+                    </div>
+                    <button onclick="exportAuditLogCSV()" class="w-full py-3 px-4 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-mono font-bold hover:bg-amber-500/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Download Change Log CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Audit Trail Table -->
+            <div class="glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
+                <h3 class="text-sm font-bold tracking-wider text-slate-200 uppercase font-mono flex items-center gap-2">
+                    <i data-lucide="history" class="w-4 h-4 text-cyan-400"></i> Active Session Audit Log
+                </h3>
+                <div class="overflow-x-auto max-h-[350px] custom-scrollbar">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-900 text-slate-400 uppercase sticky top-0">
+                            <tr>
+                                <th class="p-2.5">Timestamp</th>
+                                <th class="p-2.5">Record ID / Row</th>
+                                <th class="p-2.5">Column</th>
+                                <th class="p-2.5">Original Value</th>
+                                <th class="p-2.5">New Value</th>
+                                <th class="p-2.5">Method</th>
+                                <th class="p-2.5">Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditLogBody" class="divide-y divide-slate-800 text-slate-300">
+                            <tr>
+                                <td colspan="7" class="p-4 text-center text-slate-500 italic">No modifications logged yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Detail View Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg rounded-xl border border-slate-700 p-6 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold font-mono text-cyan-400 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Complete Record Detail
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="space-y-2 text-xs font-mono max-h-96 overflow-y-auto custom-scrollbar">
+                <!-- Injected via JS -->
+            </div>
+            <div class="pt-2 flex justify-end">
+                <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-mono rounded">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Global Application State
+        let rawDataset = [];       // Preserved original untouched state
+        let cleanDataset = [];     // Active working dataset
+        let columnTypes = {};      // Inferred datatypes per column
+        let auditLogs = [];        // Log of changes made
+        let sortConfig = { column: null, direction: 'asc' };
+        let activeTab = 'upload';
+        
+        // Chart instances
+        let histogramChartInstance = null;
+        let boxplotChartInstance = null;
+
+        // Initialize icons on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            window.lucide?.createIcons?.();
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'text-cyan-400', 'border-cyan-400');
+                btn.classList.add('text-slate-400', 'border-transparent');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+
+            const selectedBtn = document.getElementById(`tab-${tabId}`);
+            if(selectedBtn) {
+                selectedBtn.classList.add('active', 'text-cyan-400', 'border-cyan-400');
+                selectedBtn.classList.remove('text-slate-400', 'border-transparent');
+            }
+            
+            const selectedContent = document.getElementById(`section-${tabId}`);
+            if(selectedContent) selectedContent.classList.remove('hidden');
+
+            // Render specific tabs when opened
+            if (tabId === 'stats') renderDescriptiveStats();
+            if (tabId === 'outliers') renderOutlierAnalysis();
+            if (tabId === 'cleaning') renderCleaningSection();
+            if (tabId === 'export') renderAuditLog();
+        }
+
+        // CSV Parser Engine
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/);
+            if (lines.length === 0) return [];
+
+            const result = [];
+            let headers = [];
+            
+            // Basic CSV regex parser to handle quotes and commas properly
+            const parseLine = (line) => {
+                const arr = [];
+                let quote = false;
+                let col = '';
+                for (let c of line) {
+                    if (c === '"') {
+                        quote = !quote;
+                    } else if (c === ',' && !quote) {
+                        arr.push(col.trim());
+                        col = '';
+                    } else {
+                        col += c;
+                    }
+                }
+                arr.push(col.trim());
+                return arr;
+            };
+
+            headers = parseLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const rowValues = parseLine(lines[i]);
+                const rowObj = {};
+                headers.forEach((h, idx) => {
+                    let val = rowValues[idx] !== undefined ? rowValues[idx] : '';
+                    val = val.replace(/^"|"$/g, '');
+                    rowObj[h] = val;
+                });
+                result.push(rowObj);
+            }
+            return { headers, data: result };
+        }
+
+        // File Selection Handlers
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const parsed = parseCSV(e.target.result);
+                if (parsed.data.length > 0) {
+                    loadData(parsed.data);
+                    showToast(`Successfully loaded dataset "${file.name}" with ${parsed.data.length} records.`, 'success');
+                } else {
+                    showToast('CSV file appears empty or unparseable.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Load Dataset into Application State
+        function loadData(data) {
+            // Deep copy raw dataset to keep untouched original
+            rawDataset = JSON.parse(JSON.stringify(data));
+            cleanDataset = JSON.parse(JSON.stringify(data));
+            auditLogs = [];
+
+            // Detect Datatypes
+            inferColumnDataTypes();
+            updateMetadataUI();
+            buildTableHeaders();
+            applyTableFilters();
+            populateOutlierColumnDropdown();
+
+            // Status Badge update
+            const badge = document.getElementById('statusBadge');
+            badge.className = 'px-3 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-2 font-mono';
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ACTIVE DATASET: ${cleanDataset.length} ROWS`;
+        }
+
+        // Data Type Inference Engine (T1)
+        function inferColumnDataTypes() {
+            columnTypes = {};
+            if (cleanDataset.length === 0) return;
+
+            const cols = Object.keys(cleanDataset[0]);
+            cols.forEach(col => {
+                let isNumeric = true;
+                let isDate = true;
+                let isBoolean = true;
+                let nonNullCount = 0;
+
+                cleanDataset.forEach(row => {
+                    const val = row[col];
+                    if (val !== undefined && val !== null && val !== '') {
+                        nonNullCount++;
+                        if (isNaN(Number(val))) isNumeric = false;
+                        if (isNaN(Date.parse(val)) || val.length < 5) isDate = false;
+                        if (!['true', 'false', '0', '1', 'yes', 'no'].includes(String(val).toLowerCase())) isBoolean = false;
+                    }
+                });
+
+                if (nonNullCount === 0) {
+                    columnTypes[col] = 'text';
+                } else if (isNumeric) {
+                    columnTypes[col] = 'numeric';
+                } else if (isBoolean) {
+                    columnTypes[col] = 'boolean';
+                } else if (isDate) {
+                    columnTypes[col] = 'date';
+                } else {
+                    columnTypes[col] = 'text';
+                }
+            });
+        }
+
+        // Update Ingestion Metadata UI (T1)
+        function updateMetadataUI() {
+            document.getElementById('metaTotalRows').textContent = cleanDataset.length;
+            const cols = cleanDataset.length > 0 ? Object.keys(cleanDataset[0]).length : 0;
+            document.getElementById('metaTotalCols').textContent = cols;
+            document.getElementById('metaCleanRows').textContent = cleanDataset.length;
+            document.getElementById('metaLogCount').textContent = auditLogs.length;
+
+            const tbody = document.getElementById('columnMetaBody');
+            tbody.innerHTML = '';
+
+            if (cleanDataset.length === 0) return;
+
+            Object.keys(cleanDataset[0]).forEach(col => {
+                let nonNull = 0;
+                cleanDataset.forEach(r => { if(r[col] !== '' && r[col] !== null) nonNull++; });
+                let nullCount = cleanDataset.length - nonNull;
+                let sampleVal = cleanDataset.find(r => r[col] !== '')?.[col] || 'N/A';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-cyan-400">${col}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${columnTypes[col]}</span></td>
+                    <td class="p-3 text-slate-400 font-mono truncate max-w-xs">${sampleVal}</td>
+                    <td class="p-3 text-emerald-400">${nonNull}</td>
+                    <td class="p-3 ${nullCount > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}">${nullCount}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Build Explorer Table Headers with Sorting (T2)
+        function buildTableHeaders() {
+            const headerRow = document.getElementById('tableHeaderRow');
+            headerRow.innerHTML = '<th class="p-3">#</th>';
+
+            if (cleanDataset.length === 0) return;
+
+            Object.keys(cleanDataset[0]).forEach(col => {
+                const th = document.createElement('th');
+                th.className = "p-3 cursor-pointer hover:text-cyan-400 transition select-none";
+                th.onclick = () => handleSort(col);
+                th.innerHTML = `
+                    <div class="flex items-center gap-1">
+                        <span>${col}</span>
+                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-slate-500"></i>
+                    </div>
+                `;
+                headerRow.appendChild(th);
+            });
+            headerRow.innerHTML += '<th class="p-3 text-right">Actions</th>';
+            window.lucide?.createIcons?.();
+        }
+
+        // Sorting Logic (T2)
+        function handleSort(col) {
+            if (sortConfig.column === col) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.column = col;
+                sortConfig.direction = 'asc';
+            }
+            applyTableFilters();
+        }
+
+        // Search, Sort & Filter Core Implementation (T2)
+        function applyTableFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            let filtered = cleanDataset.filter(row => {
+                return Object.values(row).some(val => String(val).toLowerCase().includes(search));
+            });
+
+            // Column Sorting
+            if (sortConfig.column) {
+                const col = sortConfig.column;
+                const dir = sortConfig.direction === 'asc' ? 1 : -1;
+                filtered.sort((a, b) => {
+                    let valA = a[col];
+                    let valB = b[col];
+                    if (columnTypes[col] === 'numeric') {
+                        return (Number(valA || 0) - Number(valB || 0)) * dir;
+                    }
+                    return String(valA).localeCompare(String(valB)) * dir;
+                });
+            }
+
+            document.getElementById('filteredCountBadge').textContent = `Showing ${filtered.length} / ${cleanDataset.length}`;
+            renderTableBody(filtered);
+        }
+
+        // Render Dynamic Table Body (T2 & T3 Cell Editing)
+        function renderTableBody(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="100%" class="p-6 text-center text-slate-500">No matching records found.</td></tr>';
+                return;
+            }
+
+            data.slice(0, 100).forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition";
+                let rowHTML = `<td class="p-3 text-slate-500">${idx + 1}</td>`;
+
+                Object.keys(row).forEach(col => {
+                    const cellVal = row[col];
+                    const isMissing = cellVal === '' || cellVal === null || cellVal === undefined;
+                    rowHTML += `
+                        <td class="p-3 ${isMissing ? 'bg-rose-500/10 text-rose-300 font-bold' : ''}" 
+                            ondblclick="makeCellEditable(this, ${cleanDataset.indexOf(row)}, '${col}')">
+                            ${isMissing ? '[MISSING]' : cellVal}
+                        </td>
+                    `;
+                });
+
+                rowHTML += `
+                    <td class="p-3 text-right">
+                        <button onclick="viewRowDetail(${cleanDataset.indexOf(row)})" class="p-1 hover:bg-slate-700 rounded text-cyan-400">
+                            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tr.innerHTML = rowHTML;
+                tbody.appendChild(tr);
+            });
+            window.lucide?.createIcons?.();
+        }
+
+        // Inline Manual Cell Editing (T3)
+        function makeCellEditable(tdElement, rowIndex, colName) {
+            const originalVal = cleanDataset[rowIndex][colName];
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = originalVal;
+            input.className = 'bg-slate-900 text-cyan-300 px-2 py-1 border border-cyan-500 rounded text-xs w-full font-mono';
+            
+            tdElement.innerHTML = '';
+            tdElement.appendChild(input);
+            input.focus();
+
+            const saveEdit = () => {
+                const newVal = input.value.trim();
+                if (newVal !== originalVal) {
+                    cleanDataset[rowIndex][colName] = newVal;
+                    logAudit(rowIndex + 1, colName, originalVal, newVal, 'Manual Edit', 'User updated value via inline table editor');
+                    showToast(`Row ${rowIndex + 1} (${colName}) updated.`, 'info');
+                    inferColumnDataTypes();
+                    updateMetadataUI();
+                }
+                applyTableFilters();
+            };
+
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') saveEdit();
+            });
+        }
+
+        // Detailed Drawer / Modal View (T2)
+        function viewRowDetail(rowIndex) {
+            const row = cleanDataset[rowIndex];
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = '';
+
+            Object.entries(row).forEach(([key, value]) => {
+                const item = document.createElement('div');
+                item.className = "flex flex-col p-2 bg-slate-900/60 rounded border border-slate-800";
+                item.innerHTML = `
+                    <span class="text-slate-500 text-[10px] uppercase font-bold">${key}</span>
+                    <span class="text-slate-200 text-xs mt-0.5 break-words">${value !== '' ? value : '<em class="text-rose-400">Empty / Missing</em>'}</span>
+                `;
+                content.appendChild(item);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // Cleaning Engine Rules & Operations (T3)
+        function renderCleaningSection() {
+            if (cleanDataset.length === 0) return;
+
+            // Detect Duplicate Rows
+            let dupes = 0;
+            const seen = new Set();
+            cleanDataset.forEach(r => {
+                const str = JSON.stringify(r);
+                if (seen.has(str)) dupes++;
+                else seen.add(str);
+            });
+            document.getElementById('countDuplicates').textContent = dupes;
+
+            // Detect Missing Values
+            let missing = 0;
+            cleanDataset.forEach(r => {
+                Object.values(r).forEach(v => {
+                    if (v === '' || v === null || v === undefined) missing++;
+                });
+            });
+            document.getElementById('countMissing').textContent = missing;
+
+            // Populate Anomaly Inspector Table
+            const anomalyBody = document.getElementById('anomaliesTableBody');
+            anomalyBody.innerHTML = '';
+            let anomalyCount = 0;
+
+            cleanDataset.forEach((row, idx) => {
+                Object.entries(row).forEach(([col, val]) => {
+                    if (val === '' || val === null) {
+                        anomalyCount++;
+                        if (anomalyCount <= 50) {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td class="p-2.5 font-mono text-cyan-400">Row ${idx + 1}</td>
+                                <td class="p-2.5"><span class="px-2 py-0.5 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded">Missing Cell</span></td>
+                                <td class="p-2.5 font-mono text-slate-300">${col}</td>
+                                <td class="p-2.5 text-rose-400 font-bold">[NULL]</td>
+                                <td class="p-2.5">
+                                    <button onclick="switchTab('table')" class="text-xs text-cyan-400 underline">Fix in Table</button>
+                                </td>
+                            `;
+                            anomalyBody.appendChild(tr);
+                        }
+                    }
+                });
+            });
+
+            if (anomalyCount === 0) {
+                anomalyBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-emerald-400">No missing value anomalies detected!</td></tr>';
+            }
+        }
+
+        // Deduplication Action (T3)
+        function cleanDuplicates() {
+            const initialCount = cleanDataset.length;
+            const seen = new Set();
+            const uniqueData = [];
+
+            cleanDataset.forEach((row) => {
+                const rowStr = JSON.stringify(row);
+                if (!seen.has(rowStr)) {
+                    seen.add(rowStr);
+                    uniqueData.push(row);
+                }
+            });
+
+            const removed = initialCount - uniqueData.length;
+            if (removed > 0) {
+                cleanDataset = uniqueData;
+                logAudit('Batch', 'All Columns', 'Duplicate Rows', 'Unique Rows', 'Deduplication', `Removed ${removed} exact duplicate records.`);
+                showToast(`Removed ${removed} duplicate records.`, 'success');
+                updateMetadataUI();
+                renderCleaningSection();
+            } else {
+                showToast('No duplicate records detected.', 'info');
+            }
+        }
+
+        // Text Standardizing Action (T3)
+        function cleanTextStandardization() {
+            let modified = 0;
+            cleanDataset.forEach((row, idx) => {
+                Object.keys(row).forEach(col => {
+                    if (columnTypes[col] === 'text' && typeof row[col] === 'string') {
+                        const original = row[col];
+                        const trimmed = original.trim();
+                        if (original !== trimmed) {
+                            row[col] = trimmed;
+                            logAudit(idx + 1, col, original, trimmed, 'Trim Whitespace', 'Standardized string spacing');
+                            modified++;
+                        }
+                    }
+                });
+            });
+            showToast(`Standardized ${modified} text entries.`, 'success');
+            renderCleaningSection();
+        }
+
+        // Imputation Engine (T3)
+        function applyImputation() {
+            const method = document.getElementById('imputeMethodSelect').value;
+            let count = 0;
+
+            Object.keys(columnTypes).forEach(col => {
+                if (columnTypes[col] === 'numeric' && (method === 'mean' || method === 'median')) {
+                    const nums = cleanDataset
+                        .map(r => parseFloat(r[col]))
+                        .filter(v => !isNaN(v));
+
+                    if (nums.length === 0) return;
+
+                    let fillVal = 0;
+                    if (method === 'mean') {
+                        fillVal = nums.reduce((a, b) => a + b, 0) / nums.length;
+                    } else if (method === 'median') {
+                        nums.sort((a, b) => a - b);
+                        const mid = Math.floor(nums.length / 2);
+                        fillVal = nums.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+                    }
+                    fillVal = Math.round(fillVal * 100) / 100;
+
+                    cleanDataset.forEach((row, idx) => {
+                        if (row[col] === '' || row[col] === null || isNaN(Number(row[col]))) {
+                            const orig = row[col];
+                            row[col] = String(fillVal);
+                            logAudit(idx + 1, col, orig || '[NULL]', String(fillVal), `Imputation (${method})`, `Replaced missing numeric value with column ${method}`);
+                            count++;
+                        }
+                    });
+                }
+            });
+
+            showToast(`Imputed ${count} missing values using ${method.toUpperCase()}.`, 'success');
+            updateMetadataUI();
+            renderCleaningSection();
+        }
+
+        // Descriptive Statistics Engine (T4)
+        function renderDescriptiveStats() {
+            const headerRow = document.getElementById('statHeaderCol');
+            const tbody = document.getElementById('statsTableBody');
+            tbody.innerHTML = '';
+
+            const numericCols = Object.keys(columnTypes).filter(c => columnTypes[c] === 'numeric');
+
+            if (numericCols.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="100%" class="p-4 text-center text-slate-500">No numerical columns found in current dataset.</td></tr>';
+                return;
+            }
+
+            // Headers
+            headerRow.outerHTML = numericCols.map(c => `<th class="p-3 font-semibold text-cyan-400">${c}</th>`).join('');
+
+            // Metrics to calculate
+            const metrics = [
+                { name: 'Count (N)', fn: arr => arr.length },
+                { name: 'Total Sum', fn: arr => arr.reduce((a, b) => a + b, 0).toFixed(2) },
+                { name: 'Mean (μ)', fn: arr => (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) },
+                { name: 'Median', fn: arr => {
+                    const sorted = [...arr].sort((a, b) => a - b);
+                    const mid = Math.floor(sorted.length / 2);
+                    return (sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2).toFixed(2);
+                }},
+                { name: 'Mode', fn: arr => {
+                    const freq = {};
+                    arr.forEach(v => freq[v] = (freq[v] || 0) + 1);
+                    let maxFreq = 0, mode = arr[0];
+                    Object.entries(freq).forEach(([k, v]) => {
+                        if (v > maxFreq) { maxFreq = v; mode = k; }
+                    });
+                    return mode;
+                }},
+                { name: 'Minimum', fn: arr => Math.min(...arr).toFixed(2) },
+                { name: 'Maximum', fn: arr => Math.max(...arr).toFixed(2) },
+                { name: 'Range', fn: arr => (Math.max(...arr) - Math.min(...arr)).toFixed(2) },
+                { name: 'Std Deviation (σ)', fn: arr => {
+                    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+                    const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
+                    return Math.sqrt(variance).toFixed(2);
+                }}
+            ];
+
+            // Populate table rows
+            metrics.forEach(m => {
+                const tr = document.createElement('tr');
+                let html = `<td class="p-3 font-bold text-slate-300 font-mono">${m.name}</td>`;
+
+                numericCols.forEach(col => {
+                    const values = cleanDataset
+                        .map(r => parseFloat(r[col]))
+                        .filter(v => !isNaN(v));
+
+                    const val = values.length > 0 ? m.fn(values) : 'N/A';
+                    html += `<td class="p-3 text-cyan-300 font-mono">${val}</td>`;
+                });
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Outliers Dropdown Populate (T5)
+        function populateOutlierColumnDropdown() {
+            const select = document.getElementById('outlierColSelect');
+            select.innerHTML = '';
+            const numericCols = Object.keys(columnTypes).filter(c => columnTypes[c] === 'numeric');
+
+            numericCols.forEach(col => {
+                const opt = document.createElement('option');
+                opt.value = col;
+                opt.textContent = col;
+                select.appendChild(opt);
+            });
+        }
+
+        // Outlier Analysis & IQR Engine (T5)
+        function renderOutlierAnalysis() {
+            const select = document.getElementById('outlierColSelect');
+            const col = select.value;
+            if (!col) return;
+
+            const values = cleanDataset
+                .map(r => parseFloat(r[col]))
+                .filter(v => !isNaN(v))
+                .sort((a, b) => a - b);
+
+            if (values.length < 4) return;
+
+            // Inclusive Quartiles Calculation
+            const getQuartile = (arr, q) => {
+                const pos = (arr.length - 1) * q;
+                const base = Math.floor(pos);
+                const rest = pos - base;
+                if (arr[base + 1] !== undefined) {
+                    return arr[base] + rest * (arr[base + 1] - arr[base]);
+                } else {
+                    return arr[base];
+                }
+            };
+
+            const q1 = getQuartile(values, 0.25);
+            const q3 = getQuartile(values, 0.75);
+            const iqr = q3 - q1;
+            const lowerFence = q1 - (1.5 * iqr);
+            const upperFence = q3 + (1.5 * iqr);
+
+            const outliers = values.filter(v => v < lowerFence || v > upperFence);
+            const nonOutliers = values.filter(v => v >= lowerFence && v <= upperFence);
+
+            // Render Metrics
+            document.getElementById('valLowerFence').textContent = lowerFence.toFixed(2);
+            document.getElementById('valUpperFence').textContent = upperFence.toFixed(2);
+            document.getElementById('valOutlierCount').textContent = outliers.length;
+            document.getElementById('valOutlierPct').textContent = `${((outliers.length / values.length) * 100).toFixed(1)}%`;
+
+            // Comparison Table
+            renderOutlierComparisonTable(values, nonOutliers);
+
+            // Render Charts
+            renderCharts(col, values, lowerFence, upperFence);
+        }
+
+        // Outlier Comparison Table (T5)
+        function renderOutlierComparisonTable(allVals, cleanVals) {
+            const tbody = document.getElementById('outlierComparisonBody');
+            tbody.innerHTML = '';
+
+            const calcStats = (arr) => {
+                if(arr.length === 0) return { mean: 0, median: 0, std: 0 };
+                const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+                const sorted = [...arr].sort((a, b) => a - b);
+                const mid = Math.floor(sorted.length / 2);
+                const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+                const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
+                return { mean, median, std: Math.sqrt(variance) };
+            };
+
+            const s1 = calcStats(allVals);
+            const s2 = calcStats(cleanVals);
+
+            const rows = [
+                { name: 'Record Count (N)', v1: allVals.length, v2: cleanVals.length, delta: cleanVals.length - allVals.length },
+                { name: 'Mean (μ)', v1: s1.mean.toFixed(2), v2: s2.mean.toFixed(2), delta: (s2.mean - s1.mean).toFixed(2) },
+                { name: 'Median', v1: s1.median.toFixed(2), v2: s2.median.toFixed(2), delta: (s2.median - s1.median).toFixed(2) },
+                { name: 'Std Deviation (σ)', v1: s1.std.toFixed(2), v2: s2.std.toFixed(2), delta: (s2.std - s1.std).toFixed(2) }
+            ];
+
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-300">${r.name}</td>
+                    <td class="p-3 text-cyan-400">${r.v1}</td>
+                    <td class="p-3 text-emerald-400">${r.v2}</td>
+                    <td class="p-3 font-mono ${r.delta < 0 ? 'text-rose-400' : 'text-slate-400'}">${r.delta}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Render Interactive Visualizations (T5)
+        function renderCharts(colName, values, lowerFence, upperFence) {
+            if (typeof Chart === 'undefined') {
+                ['histogramChart', 'boxplotChart'].forEach(id => {
+                    const canvas = document.getElementById(id);
+                    if (canvas) {
+                        canvas.style.display = 'none';
+                        if (!canvas.parentElement.querySelector('.chart-fallback')) {
+                            const note = document.createElement('p');
+                            note.className = 'chart-fallback text-xs text-slate-400 text-center p-4';
+                            note.textContent = 'Charts need an internet connection to load the chart library. The analysis tables and calculations are still available.';
+                            canvas.parentElement.appendChild(note);
+                        }
+                    }
+                });
+                return;
+            }
+            // Histogram setup
+            const ctxHist = document.getElementById('histogramChart').getContext('2d');
+            if (histogramChartInstance) histogramChartInstance.destroy();
+
+            // Binning logic
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const binCount = 8;
+            const step = (max - min) / binCount || 1;
+            const bins = new Array(binCount).fill(0);
+            const labels = [];
+
+            for (let i = 0; i < binCount; i++) {
+                const bMin = (min + i * step).toFixed(1);
+                const bMax = (min + (i + 1) * step).toFixed(1);
+                labels.push(`${bMin}-${bMax}`);
+            }
+
+            values.forEach(v => {
+                let idx = Math.floor((v - min) / step);
+                if (idx >= binCount) idx = binCount - 1;
+                bins[idx]++;
+            });
+
+            histogramChartInstance = new Chart(ctxHist, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${colName} Distribution`,
+                        data: bins,
+                        backgroundColor: 'rgba(6, 182, 212, 0.4)',
+                        borderColor: '#06b6d4',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } },
+                        y: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                    }
+                }
+            });
+
+            // Boxplot Approximation Scatter Chart
+            const ctxBox = document.getElementById('boxplotChart').getContext('2d');
+            if (boxplotChartInstance) boxplotChartInstance.destroy();
+
+            const pointData = values.map((v, i) => ({
+                x: i,
+                y: v,
+                isOutlier: v < lowerFence || v > upperFence
+            }));
+
+            boxplotChartInstance = new Chart(ctxBox, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Normal Records',
+                        data: pointData.filter(p => !p.isOutlier),
+                        backgroundColor: '#10b981'
+                    }, {
+                        label: 'Outliers',
+                        data: pointData.filter(p => p.isOutlier),
+                        backgroundColor: '#f43f5e',
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { display: false },
+                        y: { ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // Session Audit Trail Logger (T6)
+        function logAudit(rowId, col, origVal, newVal, method, reason) {
+            const logEntry = {
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                rowId,
+                col,
+                origVal,
+                newVal,
+                method,
+                reason
+            };
+            auditLogs.push(logEntry);
+            updateMetadataUI();
+        }
+
+        function renderAuditLog() {
+            const tbody = document.getElementById('auditLogBody');
+            tbody.innerHTML = '';
+
+            if (auditLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">No modifications logged yet.</td></tr>';
+                return;
+            }
+
+            auditLogs.slice().reverse().forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 text-slate-400">${log.timestamp}</td>
+                    <td class="p-2.5 text-cyan-400">#${log.rowId}</td>
+                    <td class="p-2.5 text-slate-300 font-bold">${log.col}</td>
+                    <td class="p-2.5 text-rose-400">${log.origVal}</td>
+                    <td class="p-2.5 text-emerald-400">${log.newVal}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700">${log.method}</span></td>
+                    <td class="p-2.5 text-slate-400">${log.reason}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // CSV Export Handlers (T6)
+        function exportCleanedCSV() {
+            if (cleanDataset.length === 0) {
+                showToast('No active dataset to export.', 'error');
+                return;
+            }
+            const headers = Object.keys(cleanDataset[0]).join(',');
+            const rows = cleanDataset.map(r => Object.values(r).map(v => `"${v}"`).join(','));
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Cleaned_Resource_Allocation_Records.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Cleaned CSV downloaded successfully.', 'success');
+        }
+
+        function exportAuditLogCSV() {
+            if (auditLogs.length === 0) {
+                showToast('Audit log is empty.', 'info');
+                return;
+            }
+            const headers = "Timestamp,Row_ID,Column,Original_Value,New_Value,Method,Reason";
+            const rows = auditLogs.map(l => `"${l.timestamp}","${l.rowId}","${l.col}","${l.origVal}","${l.newVal}","${l.method}","${l.reason}"`);
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "Resource_Allocation_Change_Log.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Audit Log CSV downloaded successfully.', 'success');
+        }
+
+        // Mock Sample Generator Button
+        function generateSampleData() {
+            const sampleData = [
+                { Record_ID: "REC-1001", Department: "Logistics", Allocation_Credits: "4500", Priority_Level: "High", Request_Date: "2075-01-12", Notes: "Standard ship engine core supply" },
+                { Record_ID: "REC-1002", Department: "Cybernetics", Allocation_Credits: "12800", Priority_Level: "Critical", Request_Date: "2075-01-14", Notes: "AI Mind core array upgrade" },
+                { Record_ID: "REC-1003", Department: "Logistics", Allocation_Credits: "4500", Priority_Level: "High", Request_Date: "2075-01-12", Notes: "Standard ship engine core supply" }, // Exact Duplicate
+                { Record_ID: "REC-1004", Department: "Hydroponics ", Allocation_Credits: "3100", Priority_Level: "Medium", Request_Date: "2075-01-15", Notes: "Bio-dome filter replacements" }, // Spaces
+                { Record_ID: "REC-1005", Department: "Life Support", Allocation_Credits: "", Priority_Level: "Low", Request_Date: "2075-01-18", Notes: "O2 tank maintenance" }, // Missing
+                { Record_ID: "REC-1006", Department: "Defense", Allocation_Credits: "95000", Priority_Level: "Critical", Request_Date: "2075-01-20", Notes: "Shield array replacement" }, // Outlier
+                { Record_ID: "REC-1007", Department: "Research", Allocation_Credits: "5200", Priority_Level: "Medium", Request_Date: "2075-01-22", Notes: "Deep space sensor telemetry" },
+                { Record_ID: "REC-1008", Department: "Medical", Allocation_Credits: "2900", Priority_Level: "High", Request_Date: "2075-01-25", Notes: "Stasis pod restocking" }
+            ];
+
+            loadData(sampleData);
+            showToast('Generated sample assignment dataset.', 'success');
+        }
+
+        // Notification Toast Engine
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-slate-900 border-slate-700 text-slate-200';
+            if (type === 'success') bg = 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300';
+            if (type === 'error') bg = 'bg-rose-950/90 border-rose-500/50 text-rose-300';
+
+            toast.className = `p-3 text-xs font-mono rounded-lg border shadow-lg backdrop-blur-md flex items-center gap-2 transition-all duration-300 transform translate-y-2 opacity-0 ${bg}`;
+            toast.innerHTML = `<i data-lucide="info" class="w-4 h-4"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            window.lucide?.createIcons?.();
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
